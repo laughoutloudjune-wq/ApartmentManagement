@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<!--
+README (UI-only Canvas Prototype) — Apartment Management Web App
+- What this is: A single-file, UI-only prototype with mock data. No backend, no network calls.
+- How to use locally: Save as 'apartment-ui.html' and open in any modern browser.
+- How to host on GitHub Pages:
+    1) Create a repo (e.g., apartment-ui), add this file as index.html, commit & push.
+    2) In the repo: Settings → Pages → Deploy from branch → select branch (e.g., main) → folder: /root → Save.
+    3) Wait for the green check; your site will be live at the Pages URL.
+- Print to PDF (Invoices/Receipts): Open Invoices & Receipts → "Preview Invoice" (or "Preview Receipt") → in the modal click "Print" and choose "Save as PDF."
+- Where to later integrate backend / Google Sheets / storage:
+    Search for the keyword:  TODO: Google Sheets  and  TODO: Backend Storage  and  TODO: API
+- Tech notes:
+    * System font stack. Light/Dark mode. Vanilla JS (no frameworks).
+    * Accessible landmarks, ARIA labels, keyboard navigable components.
+    * Mobile-first. Sidebar on desktop, bottom nav on mobile.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Apartment Management — UI Canvas (No Backend)</title>
+<style>
+  :root {
+    /* ===== THEME TOKENS ===== */
+    --bg: #0b0c0f;
+    --bg-elev: rgba(255,255,255,0.06);
+    --panel: rgba(255,255,255,0.08);
+    --text: #f5f7fb;
+    --text-muted: #c6c9d3;
+    --primary: #4da3ff;
+    --accent: #7bd389;
+    --danger: #ff6b6b;
+    --warning: #ffb86c;
+    --ok: #30d158;
+    --ring: rgba(77,163,255,.55);
+    --shadow: 0 3px 14px rgba(0,0,0,.25);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --radius-lg: 20px;
+    --gap: 14px;
+    --gap-lg: 22px;
+    --blur: 14px;
+
+    --field-bg: rgba(255,255,255,0.12);
+    --field-border: rgba(255,255,255,0.25);
+
+    --card-bg: rgba(255,255,255,0.08);
+    --card-outline: rgba(255,255,255,0.1);
+
+    --table-grid: rgba(255,255,255,0.1);
+    --tab-indicator: rgba(255,255,255,0.18);
+  }
+  /* Light theme variables will be toggled via a class on body */
+  body.light {
+    --bg: #f6f7fb;
+    --bg-elev: rgba(255,255,255,0.8);
+    --panel: rgba(255,255,255,0.9);
+    --text: #12141a;
+    --text-muted: #4a5060;
+    --primary: #1769ff;
+    --accent: #0fb76c;
+    --danger: #e34b52;
+    --warning: #f59e0b;
+    --ok: #0a8f3a;
+    --ring: rgba(23,105,255,.35);
+    --shadow: 0 8px 24px rgba(0,0,0,.08);
+    --field-bg: rgba(0,0,0,0.04);
+    --field-border: rgba(0,0,0,0.12);
+    --card-bg: #ffffff;
+    --card-outline: rgba(0,0,0,.06);
+    --table-grid: rgba(0,0,0,0.08);
+    --tab-indicator: rgba(0,0,0,0.08);
+  }
+
+  /* ===== Base Reset ===== */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    color: var(--text);
+    background: radial-gradient(1200px 800px at 50% -10%, rgba(77,163,255,.08), transparent 60%),
+                radial-gradient(1000px 600px at 120% 20%, rgba(123,211,137,.10), transparent 60%),
+                var(--bg);
+    line-height: 1.35;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+  button { font: inherit; }
+
+  /* ===== Layout ===== */
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100dvh;
+  }
+
+  header.appbar {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: saturate(1.2) blur(var(--blur));
+    background: linear-gradient(180deg, rgba(0,0,0,.25), transparent);
+    padding: 10px var(--gap);
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--gap);
+    border-bottom: 1px solid var(--card-outline);
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 10px;
+    background: var(--panel);
+    border: 1px solid var(--card-outline);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .brand .logo {
+    inline-size: 28px; block-size: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+  }
+  .brand .title { font-weight: 700; letter-spacing: .2px; }
+
+  .hdr-actions {
+    display: flex; align-items: center; gap: 8px; justify-content: flex-end;
+  }
+  .btn {
+    appearance: none; border: none; padding: 10px 14px; border-radius: 999px;
+    background: var(--field-bg);
+    color: var(--text);
+    border: 1px solid var(--field-border);
+    cursor: pointer; transition: transform .05s ease, background .2s ease, border-color .2s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.primary { background: linear-gradient(180deg, var(--primary), color-mix(in srgb, var(--primary) 78%, black)); border-color: transparent; color: white; }
+  .btn.accent { background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 78%, black)); color: white; border-color: transparent; }
+  .btn.ghost { background: transparent; border-color: var(--field-border); }
+  .chip {
+    display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+    border:1px solid var(--card-outline); background: var(--panel); font-size: 12.5px;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gap);
+    padding: var(--gap);
+  }
+  @media (min-width: 960px) {
+    .shell {
+      grid-template-columns: 260px 1fr;
+      gap: var(--gap-lg);
+    }
+  }
+
+  nav.sidebar {
+    display: none;
+  }
+  @media (min-width: 960px) {
+    nav.sidebar {
+      display: block;
+      position: sticky; top: 70px; align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--card-outline);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 10px;
+    }
+  }
+  .navgroup { padding: 6px; }
+  .navitem {
+    display: grid; grid-template-columns: 26px 1fr auto; align-items: center;
+    gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  }
+  .navitem[aria-current="page"], .navitem:hover {
+    background: var(--tab-indicator);
+  }
+  .navitem .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--primary); color: #fff;
+  }
+
+  main.content {
+    display: grid; gap: var(--gap);
+  }
+
+  /* Bottom mobile nav */
+  .mobile-tabbar {
+    position: sticky; bottom: 0; z-index: 40;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 0; border-top: 1px solid var(--card-outline);
+    background: color-mix(in oklab, var(--panel) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+  .mobile-tabbar button {
+    appearance: none; border: 0; background: none; padding: 8px 4px; color: var(--text-muted);
+  }
+  .mobile-tabbar button[aria-selected="true"] { color: var(--text); font-weight: 600; }
+  @media (min-width: 960px) {
+    .mobile-tabbar { display: none; }
+  }
+
+  /* ===== Utilities ===== */
+  .row { display: grid; gap: var(--gap); }
+  @media (min-width: 960px) { .row.cols-2 { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1200px) { .row.cols-3 { grid-template-columns: repeat(3, 1fr); } }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--card-outline);
+    border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow);
+  }
+  .glass {
+    background: var(--panel);
+    border: 1px solid var(--card-outline);
+    backdrop-filter: blur(var(--blur));
+  }
+  .section-title { font-size: 18px; font-weight: 700; margin: 2px 0 8px; }
+  .muted { color: var(--text-muted); }
+  .divider { height: 1px; background: var(--table-grid); margin: 8px 0; }
+  .pill { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--card-outline); background: var(--panel); font-size: 12px; }
+  .status { font-size: 12px; padding: 4px 8px; border-radius: 999px; }
+  .status.paid { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 50%, transparent); }
+  .status.overdue { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent); }
+  .status.draft { background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent); }
+  .status.sent { background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 50%, transparent); }
+
+  /* Forms */
+  .form-grid { display: grid; gap: 10px; }
+  @media (min-width: 720px) { .form-grid.cols-2 { grid-template-columns: repeat(2, 1fr); } }
+  .fbox {
+    display: grid; gap: 6px; padding: 12px; border-radius: var(--radius-sm);
+    background: var(--field-bg); border: 1px solid var(--field-border);
+  }
+  .fbox label { font-size: 12px; color: var(--text-muted); }
+  .fbox input, .fbox select, .fbox textarea {
+    appearance: none; width: 100%; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid var(--field-border); background: transparent; color: var(--text);
+    outline: none;
+  }
+  .fbox input:focus, .fbox select:focus, .fbox textarea:focus { border-color: var(--ring); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 35%, transparent); }
+  .helper { font-size: 11px; color: var(--text-muted); }
+
+  /* Table */
+  .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .table th, .table td { border-bottom: 1px solid var(--table-grid); padding: 10px 8px; text-align: left; vertical-align: middle; }
+  .table th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+  .table tr:hover td { background: color-mix(in srgb, var(--panel) 70%, transparent); }
+  .t-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+
+  /* KPI Cards */
+  .kpi {
+    display: grid; gap: 8px; padding: 14px; border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, var(--panel), transparent);
+    border: 1px solid var(--card-outline);
+    min-height: 100px;
+  }
+  .kpi .label { color: var(--text-muted); font-size: 12px; }
+  .kpi .value { font-size: 28px; font-weight: 800; letter-spacing: .2px; }
+
+  /* Drawers / Modals */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4);
+    display: none; z-index: 100;
+  }
+  .overlay.show { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: -420px; width: min(420px, 96vw); height: 100%;
+    background: var(--card-bg); border-left: 1px solid var(--card-outline);
+    box-shadow: var(--shadow);
+    padding: 14px; overflow: auto; transition: right .25s ease; z-index: 110;
+  }
+  .drawer.show { right: 0; }
+  .modal {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 120;
+  }
+  .modal.show { display: grid; }
+  .modal .dialog {
+    background: var(--card-bg); border: 1px solid var(--card-outline);
+    border-radius: var(--radius-lg); width: min(920px, 96vw); max-height: 86vh; overflow: auto; padding: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  /* Toasts */
+  .toasts {
+    position: fixed; right: 10px; bottom: 10px; z-index: 140; display: grid; gap: 8px; max-width: 92vw;
+  }
+  .toast {
+    background: var(--panel); border: 1px solid var(--card-outline); border-radius: 999px; padding: 10px 14px;
+    box-shadow: var(--shadow);
+  }
+
+  /* FAB */
+  .fab {
+    position: fixed; right: 16px; bottom: 70px; z-index: 90;
+  }
+  @media (min-width: 960px) { .fab { display: none; } }
+
+  /* Upload grid */
+  .thumbgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (min-width: 720px) { .thumbgrid { grid-template-columns: repeat(5, 1fr); } }
+  .thumb {
+    background: var(--panel); border: 1px solid var(--card-outline); border-radius: 10px; padding: 8px;
+    display: grid; gap: 6px;
+  }
+  .thumb img { border-radius: 8px; aspect-ratio: 1 / 1; object-fit: cover; background: #111; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; background: var(--panel); border: 1px solid var(--card-outline); padding: 6px; border-radius: 999px; width: max-content; }
+  .tabs button {
+    padding: 8px 12px; border-radius: 999px; border: 0; background: transparent; color: var(--text-muted); cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { background: var(--tab-indicator); color: var(--text); }
+
+  /* Print sheet for Invoice/Receipt */
+  @media print {
+    body { background: white; color: black; }
+    .print-sheet {
+      padding: 24px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body class="light">
+  <div class="app" id="app">
+    <!-- ===== HEADER / APP BAR ===== -->
+    <header class="appbar" role="banner" aria-label="Top app bar">
+      <div class="brand" role="link" tabindex="0" aria-label="Home - Apartment Management">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="title">Apartment Management</div>
+        <span class="chip" style="margin-left:6px;">UI Canvas</span>
+      </div>
+      <div></div>
+      <div class="hdr-actions">
+        <span class="chip" title="Theme" aria-live="polite"><span id="themeLabel">Light</span> Mode</span>
+        <button class="btn ghost" id="toggleTheme" aria-pressed="false" aria-label="Toggle light/dark mode">Toggle</button>
+        <button class="btn" id="quickAddRenter" aria-label="Quick Add Renter">+ Add Renter</button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <!-- ===== DESKTOP SIDEBAR NAV ===== -->
+      <nav class="sidebar" role="navigation" aria-label="Primary">
+        <div class="navgroup">
+          <div class="navitem" data-route="dashboard" aria-current="page">
+            <span>🏠</span><span>Dashboard</span><span class="badge" id="badgeUnpaid">0</span>
+          </div>
+          <div class="navitem" data-route="renters">
+            <span>👤</span><span>Renters</span><span></span>
+          </div>
+          <div class="navitem" data-route="rooms">
+            <span>🚪</span><span>Rooms</span><span></span>
+          </div>
+          <div class="navitem" data-route="payments">
+            <span>💳</span><span>Payments</span><span></span>
+          </div>
+          <div class="navitem" data-route="invoices">
+            <span>🧾</span><span>Invoices & Receipts</span><span></span>
+          </div>
+          <div class="navitem" data-route="reports">
+            <span>📊</span><span>Reports</span><span></span>
+          </div>
+          <div class="navitem" data-route="files">
+            <span>🖼️</span><span>Files</span><span></span>
+          </div>
+          <div class="navitem" data-route="settings">
+            <span>⚙️</span><span>Settings</span><span></span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- ===== MAIN CONTENT AREA ===== -->
+      <main id="routeContainer" class="content" role="main" aria-live="polite">
+        <!-- Views injected by JS -->
+      </main>
+    </div>
+
+    <!-- ===== MOBILE TAB BAR ===== -->
+    <div class="mobile-tabbar no-print" role="tablist" aria-label="Mobile navigation">
+      <button role="tab" aria-selected="true" data-route="dashboard">🏠<div style="font-size:11px;">Home</div></button>
+      <button role="tab" data-route="renters">👤<div style="font-size:11px;">Renters</div></button>
+      <button role="tab" data-route="rooms">🚪<div style="font-size:11px;">Rooms</div></button>
+      <button role="tab" data-route="payments">💳<div style="font-size:11px;">Pay</div></button>
+      <button role="tab" data-route="invoices">🧾<div style="font-size:11px;">Bills</div></button>
+    </div>
+
+    <!-- ===== FAB (mobile) ===== -->
+    <div class="fab no-print">
+      <button class="btn primary" id="fabAction">+ Action</button>
+    </div>
+  </div>
+
+  <!-- ===== OVERLAY / DRAWERS / MODALS ===== -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Add Renter Drawer -->
+  <aside class="drawer" id="drawerRenter" aria-label="Add Renter Drawer" aria-hidden="true">
+    <div class="section-title">Add Renter</div>
+    <div class="muted">This creates a renter record and assigns a room & payment method.</div>
+    <div class="divider"></div>
+    <form id="formAddRenter" class="form-grid">
+      <div class="fbox">
+        <label for="rName">Full Name</label>
+        <input id="rName" required placeholder="e.g., Nattapong K." />
+      </div>
+      <div class="fbox">
+        <label for="rPhone">Phone</label>
+        <input id="rPhone" type="tel" placeholder="08x-xxx-xxxx" />
+      </div>
+      <div class="fbox">
+        <label for="rAddress">Address</label>
+        <input id="rAddress" placeholder="Current mailing address" />
+      </div>
+      <div class="fbox">
+        <label for="rRoom">Room</label>
+        <select id="rRoom"></select>
+        <div class="helper">Only vacant rooms are selectable</div>
+      </div>
+      <div class="fbox">
+        <label for="rMoveIn">Move-in Date</label>
+        <input id="rMoveIn" type="date" />
+      </div>
+      <div class="fbox">
+        <label for="rDeposit">Deposit Amount (THB)</label>
+        <input id="rDeposit" type="number" inputmode="decimal" placeholder="e.g., 5000" />
+      </div>
+      <div class="fbox">
+        <label for="rMethod">Payment Method (Room)</label>
+        <select id="rMethod">
+          <option>Cash</option>
+          <option>Bank Transfer</option>
+          <option>PromptPay</option>
+          <option>Credit Card</option>
+        </select>
+      </div>
+      <div class="fbox" style="grid-column: 1 / -1;">
+        <label for="rNotes">Notes</label>
+        <textarea id="rNotes" rows="3" placeholder="Any contract notes..."></textarea>
+      </div>
+      <div class="t-actions" style="grid-column: 1 / -1;">
+        <button type="button" class="btn ghost" data-close="drawerRenter">Cancel</button>
+        <button type="submit" class="btn primary">Save Renter</button>
+      </div>
+    </form>
+    <!-- TODO: Google Sheets — After saving, push renter row to Sheet -->
+  </aside>
+
+  <!-- Renter Detail Drawer (slide-over) -->
+  <aside class="drawer" id="drawerRenterDetail" aria-label="Renter Detail Drawer" aria-hidden="true">
+    <div class="section-title" id="rdName">Renter</div>
+    <div class="muted" id="rdMeta">Room • Status</div>
+    <div class="divider"></div>
+    <div class="row cols-2">
+      <div class="card">
+        <div class="muted">Current Balance</div>
+        <div class="value" id="rdBalance" style="font-size:24px;font-weight:800;">THB 0</div>
+        <div class="divider"></div>
+        <div class="row" style="grid-template-columns: repeat(3, 1fr);">
+          <button class="btn" id="rdCreateInvoice">Create Invoice</button>
+          <button class="btn" id="rdRecordPayment">Record Payment</button>
+          <button class="btn" id="rdUploadSlip">Upload Slip</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="muted">Payment Method</div>
+        <div id="rdMethod" class="pill">—</div>
+        <div class="muted" style="margin-top:10px;">Contact</div>
+        <div id="rdContact">—</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">Timeline</div>
+      <div id="rdTimeline" class="row"></div>
+    </div>
+  </aside>
+
+  <!-- Print Preview Modal -->
+  <div class="modal" id="modalPrint" aria-hidden="true" aria-label="Print Preview Modal">
+    <div class="dialog">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <div class="section-title" id="printTitle">Preview</div>
+        <div class="t-actions">
+          <button class="btn ghost" data-close="modalPrint">Close</button>
+          <button class="btn primary" id="btnPrint">Print</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <iframe id="printFrame" title="Print Frame" style="width:100%;height:70vh;border:0;background:white;border-radius:10px;"></iframe>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ============================================================================================
+   STATE & MOCKS
+   ============================================================================================ */
+const $ = (q, el=document) => el.querySelector(q);
+const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+
+const Store = {
+  // Settings (editable in Settings screen)
+  billing: {
+    defaultRoomRate: 4500,
+    elecRate: 8.50, // THB / kWh
+    waterRate: 18.00, // THB / m3
+    lateFeePolicy: { type: 'percent', value: 2 }, // % per month
+    depositPolicy: 'Usually 1 month deposit + 1 month advance (display only)'
+  },
+  // Rooms 101–120 with mix of occupied/vacant
+  rooms: Array.from({length:20}, (_,i) => {
+    const no = 101+i;
+    const occupied = Math.random() > 0.35;
+    return {
+      roomNo: String(no),
+      type: (no % 2 === 0) ? 'Twin' : 'Studio',
+      rate: 4000 + (no % 5) * 250,
+      status: occupied ? 'Occupied' : 'Vacant',
+      currentRenterId: null,
+      method: ['Cash','Bank Transfer','PromptPay','Credit Card'][no % 4],
+      meters: { elecLast: 1250 + (no%17)*13, waterLast: 600 + (no%9)*7 },
+      history: [] // {renterId, moveIn, moveOut}
+    };
+  }),
+  renters: [],
+  invoices: [],
+  payments: [],
+  slips: [], // {id, roomNo, renterId, month, amount, date, dataUrl}
+};
+
+const ThaiNames = [
+  'Nattapong K.', 'Waranya T.', 'Supachai M.', 'Siriporn W.', 'Kittisak S.',
+  'Patcharaporn L.', 'Thanakorn P.', 'Sasithorn N.', 'Apichart R.', 'Chananan C.'
+];
+
+// Seed mock renters into some rooms
+(function seedMock(){
+  const occupiedRooms = Store.rooms.filter(r => r.status==='Occupied');
+  occupiedRooms.slice(0, 8).forEach((room, idx) => {
+    const renter = {
+      id: 'r' + (1000 + idx),
+      name: ThaiNames[idx % ThaiNames.length],
+      phone: '08' + Math.floor(10000000 + Math.random()*89999999),
+      address: 'Chonburi, Thailand',
+      roomNo: room.roomNo,
+      moveIn: dateStr(-60 + (idx*4)), // days offset
+      deposit: 5000,
+      method: room.method,
+      notes: '',
+      status: 'Active' // Active / Moved-out
+    };
+    Store.renters.push(renter);
+    room.currentRenterId = renter.id;
+    room.history.push({ renterId: renter.id, moveIn: renter.moveIn, moveOut: null });
+  });
+
+  // Mock invoices & payments
+  Store.renters.forEach((r, i) => {
+    const invId = 'inv' + (1000+i);
+    const monthLabel = monthStr(0);
+    const room = Store.rooms.find(x=>x.roomNo===r.roomNo);
+    const elecKwh = 120 + (i*3);
+    const waterM3 = 9 + (i%5);
+    const lateFee = (i%3===0)? Math.round(room.rate*0.02) : 0;
+    const total = room.rate + elecKwh*Store.billing.elecRate + waterM3*Store.billing.waterRate + lateFee;
+    const status = (i%4===0)? 'Overdue' : (i%3===0? 'Sent' : 'Paid');
+
+    Store.invoices.push({
+      id: invId, renterId: r.id, roomNo: r.roomNo, month: monthLabel,
+      items: [
+        { label: 'Room Rate', qty: 1, unit: 'mo', price: room.rate },
+        { label: 'Electricity', qty: elecKwh, unit: 'kWh', price: Store.billing.elecRate },
+        { label: 'Water', qty: waterM3, unit: 'm³', price: Store.billing.waterRate },
+        ...(lateFee ? [{ label: 'Late Fee', qty: 1, unit: 'flat', price: lateFee }] : [])
+      ],
+      total: Math.round(total),
+      status
+    });
+
+    if (status === 'Paid') {
+      Store.payments.push({
+        id: 'pay'+(1000+i),
+        renterId: r.id, roomNo: r.roomNo, month: monthLabel,
+        amount: Math.round(total),
+        date: dateStr(-1*(i%10)),
+        method: r.method,
+        type: 'Full' // or 'Installment'
+      });
+    }
+  });
+
+  // Mock slips
+  for (let i=0;i<6;i++){
+    const r = Store.renters[i % Store.renters.length];
+    Store.slips.push({
+      id: 'slip'+(1000+i),
+      renterId: r.id,
+      roomNo: r.roomNo,
+      month: monthStr(0),
+      amount: 1000+ i*250,
+      date: dateStr(-i),
+      dataUrl: placeholderBase64()
+    });
+  }
+})();
+
+/* ============================================================================================
+   HELPERS
+   ============================================================================================ */
+function fmtTHB(n){ return 'THB ' + (Number(n)||0).toLocaleString('en-TH', {maximumFractionDigits:2}); }
+function dateStr(offsetDays=0){
+  const d = new Date(); d.setDate(d.getDate()+offsetDays);
+  return d.toISOString().slice(0,10);
+}
+function monthStr(offsetMonths=0){
+  const d = new Date(); d.setMonth(d.getMonth()+offsetMonths);
+  return d.toLocaleString('en-US',{month:'long', year:'numeric'});
+}
+function toast(msg, ms=2200){
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(()=>{ el.style.opacity = '0'; el.style.transform='translateY(6px)'; }, ms-350);
+  setTimeout(()=> el.remove(), ms);
+}
+function openDrawer(id){ $('#overlay').classList.add('show'); const d = $('#'+id); d.classList.add('show'); d.setAttribute('aria-hidden','false'); }
+function closeDrawer(id){ const d = $('#'+id); d.classList.remove('show'); d.setAttribute('aria-hidden','true'); $('#overlay').classList.remove('show'); }
+function openModal(id){ $('#'+id).classList.add('show'); $('#'+id).setAttribute('aria-hidden','false'); }
+function closeModal(id){ $('#'+id).classList.remove('show'); $('#'+id).setAttribute('aria-hidden','true'); }
+function setRoute(route){ window.location.hash = '#/'+route; renderRoute(route); highlightNav(route); }
+function highlightNav(route){
+  $$('.navitem').forEach(n => n.setAttribute('aria-current', n.dataset.route===route ? 'page':'false'));
+  $$('.mobile-tabbar [role=tab]').forEach(t=> t.setAttribute('aria-selected', t.dataset.route===route ? 'true':'false'));
+}
+function sum(arr, key){ return arr.reduce((a,b)=> a + (key? Number(b[key])||0 : Number(b)||0), 0); }
+function csvFromRows(rows){
+  return rows.map(r => r.map(x => `"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');
+}
+function download(text, name='export.csv', type='text/csv'){
+  const blob = new Blob([text], {type}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+}
+function placeholderBase64(){
+  // simple tiny gradient square
+  const svg = encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'>
+    <defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#4da3ff'/><stop offset='1' stop-color='#7bd389'/></linearGradient></defs>
+    <rect width='100%' height='100%' fill='url(#g)' rx='24'/></svg>`);
+  return `data:image/svg+xml;charset=utf-8,${svg}`;
+}
+
+/* ============================================================================================
+   ROUTER & VIEWS
+   ============================================================================================ */
+const Routes = {
+  dashboard(){
+    const occupied = Store.rooms.filter(r=>r.status==='Occupied').length;
+    const vacant = Store.rooms.length - occupied;
+    const thisMonth = monthStr(0);
+    const invThis = Store.invoices.filter(i=>i.month===thisMonth);
+    const unpaid = invThis.filter(i=>i.status!=='Paid').length;
+    const paidSum = sum(Store.payments.filter(p=>p.month===thisMonth), 'amount');
+
+    $('#badgeUnpaid').textContent = unpaid;
+
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Dashboard ========== -->
+      <section class="row">
+        <div class="row cols-3">
+          <div class="kpi">
+            <div class="label">Total Rooms</div>
+            <div class="value">${Store.rooms.length}</div>
+            <div class="muted">Units</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Occupied</div>
+            <div class="value">${occupied}</div>
+            <div class="muted">Currently</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Vacant</div>
+            <div class="value">${vacant}</div>
+            <div class="muted">Available</div>
+          </div>
+        </div>
+        <div class="row cols-3">
+          <div class="kpi">
+            <div class="label">Unpaid Invoices (this month)</div>
+            <div class="value">${unpaid}</div>
+            <div class="muted">${thisMonth}</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Collected (this month)</div>
+            <div class="value">${fmtTHB(paidSum)}</div>
+            <div class="muted">Payments</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Quick Actions</div>
+            <div class="row" style="grid-template-columns: repeat(3, 1fr);">
+              <button class="btn">Add Renter</button>
+              <button class="btn">Create Invoice</button>
+              <button class="btn">Record Payment</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Recent Invoices</div>
+          <table class="table">
+            <thead><tr><th>Room</th><th>Renter</th><th>Month</th><th>Total</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              ${Store.invoices.slice(0,8).map(inv=>{
+                const r = Store.renters.find(x=>x.id===inv.renterId);
+                return `<tr>
+                  <td>${inv.roomNo}</td>
+                  <td>${r?.name||'-'}</td>
+                  <td>${inv.month}</td>
+                  <td>${fmtTHB(inv.total)}</td>
+                  <td><span class="status ${inv.status.toLowerCase()}">${inv.status}</span></td>
+                  <td class="t-actions"><button class="btn ghost" data-preview-invoice="${inv.id}">Preview</button></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+    // wire quick actions
+    $$('.kpi .btn').forEach((b,i)=>{
+      b.addEventListener('click', ()=>{
+        if(i===0){ openAddRenter(); }
+        if(i===1){ setRoute('invoices'); scrollToForm('invoice'); }
+        if(i===2){ setRoute('payments'); scrollToForm('payment'); }
+      });
+    });
+    // preview
+    $$('[data-preview-invoice]').forEach(btn=>{
+      btn.addEventListener('click', ()=> previewInvoice(btn.dataset.previewInvoice, 'invoice'));
+    });
+  },
+
+  renters(){
+    // search/filter bar + table + actions
+    const rows = Store.renters.map(r=>{
+      return `<tr data-renter-id="${r.id}">
+        <td>${r.name}</td>
+        <td>${r.roomNo||'-'}</td>
+        <td>${r.phone||'-'}</td>
+        <td>${r.moveIn||'-'}</td>
+        <td>${r.method||'-'}</td>
+        <td><span class="pill">${r.status}</span></td>
+        <td class="t-actions">
+          <button class="btn" data-view="${r.id}">View</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Renters ========== -->
+      <section class="row">
+        <div class="card">
+          <div class="row cols-2" style="align-items:end;">
+            <div class="form-grid cols-2">
+              <div class="fbox"><label>Name</label><input id="fName" placeholder="Search by name"></div>
+              <div class="fbox"><label>Room</label><input id="fRoom" placeholder="Room No."></div>
+            </div>
+            <div class="t-actions">
+              <button class="btn" id="btnFilterRenters">Filter</button>
+              <button class="btn ghost" id="btnClearRenters">Clear</button>
+              <button class="btn primary" id="btnAddRenter">+ Add Renter</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="muted" id="renterCount">${Store.renters.length} renters</div>
+          <div style="overflow:auto; max-width:100%;">
+            <table class="table" id="renterTable" aria-label="Renters table">
+              <thead><tr><th>Renter Name</th><th>Room</th><th>Phone</th><th>Move-in</th><th>Payment Method</th><th>Status</th><th></th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <div class="helper">Empty state? Click “+ Add Renter”.</div>
+        </div>
+      </section>
+    `;
+    // actions
+    $('#btnAddRenter').addEventListener('click', openAddRenter);
+    $('#btnFilterRenters').addEventListener('click', ()=>{
+      const name = $('#fName').value.toLowerCase().trim();
+      const room = $('#fRoom').value.trim();
+      filterRenters(name, room);
+    });
+    $('#btnClearRenters').addEventListener('click', ()=>{
+      $('#fName').value=''; $('#fRoom').value='';
+      filterRenters('', '');
+    });
+    $$('[data-view]').forEach(b=> b.addEventListener('click', ()=> openRenterDetail(b.dataset.view)));
+  },
+
+  rooms(){
+    const cards = Store.rooms.map(r=>{
+      const renter = Store.renters.find(x=>x.id===r.currentRenterId);
+      return `<div class="card">
+        <div class="row" style="grid-template-columns: 1fr auto;">
+          <div>
+            <div class="section-title">Room ${r.roomNo}</div>
+            <div class="muted">${r.type} • Rate ${fmtTHB(r.rate)}</div>
+          </div>
+          <div><span class="pill">${r.status}</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="row cols-2">
+          <div>
+            <div class="muted">Current Renter</div>
+            <div>${renter ? renter.name : '-'}</div>
+          </div>
+          <div>
+            <div class="muted">Payment Method</div>
+            <div class="pill">${r.method}</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="row cols-2">
+          <div class="fbox">
+            <label>Electricity Last Reading</label>
+            <input value="${r.meters.elecLast}" disabled />
+          </div>
+          <div class="fbox">
+            <label>Water Last Reading</label>
+            <input value="${r.meters.waterLast}" disabled />
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="muted">History</div>
+        <div class="row">
+          ${(r.history.length? r.history.map(h=>{
+            const rr = Store.renters.find(x=>x.id===h.renterId);
+            return `<div class="chip">${rr?.name||'-'} • ${h.moveIn||''} — ${h.moveOut||'present'}</div>`;
+          }).join('') : '<div class="helper">No history yet.</div>')}
+        </div>
+      </div>`;
+    }).join('');
+
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Rooms ========== -->
+      <section class="row">
+        <div class="row cols-3">
+          ${cards}
+        </div>
+      </section>
+    `;
+  },
+
+  payments(){
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Payments ========== -->
+      <section class="row">
+        <div class="card">
+          <div class="row" style="align-items:center; justify-content: space-between;">
+            <div class="section-title">Record Payment</div>
+            <div class="tabs" role="tablist" aria-label="Payment Tabs">
+              <button role="tab" aria-selected="true" data-tab="record">Record</button>
+              <button role="tab" data-tab="slips">Payment Slips</button>
+              <button role="tab" data-tab="batch">Batch Reconcile</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div id="tabContent"></div>
+        </div>
+      </section>
+    `;
+    renderPaymentTab('record');
+    $$('.tabs [role=tab]').forEach(t=>{
+      t.addEventListener('click', ()=>{
+        $$('.tabs [role=tab]').forEach(x=>x.setAttribute('aria-selected','false'));
+        t.setAttribute('aria-selected','true');
+        renderPaymentTab(t.dataset.tab);
+      });
+    });
+  },
+
+  invoices(){
+    // Invoice form (with calculation), and preview modal triggers
+    const renterOptions = Store.renters.map(r=>`<option value="${r.id}" data-room="${r.roomNo}">${r.name} — Room ${r.roomNo}</option>`).join('');
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Invoices & Receipts ========== -->
+      <section class="row">
+        <div class="card" id="invoiceFormCard">
+          <div class="section-title">Invoice Generator</div>
+          <div class="form-grid cols-2">
+            <div class="fbox">
+              <label>Renter</label>
+              <select id="invRenter">${renterOptions}</select>
+            </div>
+            <div class="fbox">
+              <label>Period (Month)</label>
+              <input id="invMonth" value="${monthStr(0)}" />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="section-title">Line Items</div>
+          <div class="form-grid cols-2">
+            <div class="fbox">
+              <label>Room Rate (THB)</label>
+              <input id="liRoomRate" type="number" inputmode="decimal" value="${Store.billing.defaultRoomRate}" />
+            </div>
+            <div class="fbox">
+              <label>Electricity (kWh)</label>
+              <input id="liKwh" type="number" inputmode="decimal" value="0" />
+              <div class="helper">Rate: ${fmtTHB(Store.billing.elecRate)}/kWh</div>
+            </div>
+            <div class="fbox">
+              <label>Water (m³)</label>
+              <input id="liM3" type="number" inputmode="decimal" value="0" />
+              <div class="helper">Rate: ${fmtTHB(Store.billing.waterRate)}/m³</div>
+            </div>
+            <div class="fbox">
+              <label>Late Fee</label>
+              <input id="liLate" type="number" inputmode="decimal" value="0" />
+              <div class="helper">Policy: ${Store.billing.lateFeePolicy.type==='percent' ? Store.billing.lateFeePolicy.value + '%/mo' : fmtTHB(Store.billing.lateFeePolicy.value)}</div>
+            </div>
+            <div class="fbox">
+              <label>Other Adjustments (+)</label>
+              <input id="liOther" type="number" inputmode="decimal" value="0" />
+            </div>
+            <div class="fbox">
+              <label>Move-out?</label>
+              <select id="liMoveOut"><option>No</option><option>Yes</option></select>
+              <div class="helper">If Yes, you can return deposit below.</div>
+            </div>
+            <div class="fbox">
+              <label>Deposit Return (–)</label>
+              <input id="liDepositReturn" type="number" inputmode="decimal" value="0" />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="row cols-2">
+            <div class="kpi">
+              <div class="label">Total</div>
+              <div class="value" id="invTotal">THB 0</div>
+              <div class="muted" id="invBreakdown">—</div>
+            </div>
+            <div class="row" style="align-content:center;">
+              <div class="t-actions">
+                <button class="btn" id="btnPreviewInvoice">Preview Invoice (PDF)</button>
+                <button class="btn ghost" id="btnPreviewReceipt">Preview Receipt (PDF)</button>
+              </div>
+              <div class="helper">This creates a print-ready layout. Use your browser’s Print → “Save as PDF”.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+    // Wire calculation
+    const inputs = ['liRoomRate','liKwh','liM3','liLate','liOther','liDepositReturn'].map(id=>$('#'+id));
+    const invTotal = $('#invTotal'), invBreakdown = $('#invBreakdown');
+    function recalc(){
+      const room = Number($('#liRoomRate').value||0);
+      const kwh = Number($('#liKwh').value||0);
+      const m3 = Number($('#liM3').value||0);
+      const late = Number($('#liLate').value||0);
+      const other = Number($('#liOther').value||0);
+      const dep = Number($('#liDepositReturn').value||0);
+      const total = room + kwh*Store.billing.elecRate + m3*Store.billing.waterRate + late + other - dep;
+      invTotal.textContent = fmtTHB(Math.max(0,total));
+      invBreakdown.textContent = `Room ${fmtTHB(room)} + Elec ${kwh}×${Store.billing.elecRate} + Water ${m3}×${Store.billing.waterRate} + Late ${fmtTHB(late)} + Other ${fmtTHB(other)} – Deposit ${fmtTHB(dep)}`;
+    }
+    inputs.forEach(i=> i.addEventListener('input', recalc));
+    recalc();
+
+    // Preview buttons
+    $('#btnPreviewInvoice').addEventListener('click', ()=>{
+      const inv = collectInvoiceForm('Invoice');
+      injectPrint(inv);
+      openModal('modalPrint');
+      toast('Previewing invoice');
+    });
+    $('#btnPreviewReceipt').addEventListener('click', ()=>{
+      const inv = collectInvoiceForm('Receipt');
+      injectPrint(inv);
+      openModal('modalPrint');
+      toast('Previewing receipt');
+    });
+  },
+
+  reports(){
+    const month = monthStr(0);
+    const rows = Store.payments.map(p=>{
+      const r = Store.renters.find(x=>x.id===p.renterId);
+      return [p.roomNo, r?.name||'-', p.amount, p.date, p.method, 'Paid'];
+    });
+    const yearSummary = summarizeYear();
+
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Reports ========== -->
+      <section class="row">
+        <div class="card">
+          <div class="row" style="justify-content: space-between; align-items:center;">
+            <div class="section-title">Monthly Payment Report</div>
+            <div class="row" style="grid-auto-flow: column; gap:8px; align-items:center;">
+              <div class="fbox" style="min-width:220px;">
+                <label>Month</label><input id="repMonth" value="${month}" />
+              </div>
+              <button class="btn" id="btnExportCsv">Export CSV</button>
+              <button class="btn ghost" id="btnCopyCsv">Copy to Clipboard</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div style="overflow:auto;">
+            <table class="table" id="repTable">
+              <thead><tr><th>Room No.</th><th>Name</th><th>Amount</th><th>Date of Payment</th><th>Payment Method</th><th>Status</th></tr></thead>
+              <tbody>
+                ${rows.map(r=> `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${fmtTHB(r[2])}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="helper">// TODO: Google Sheets — append rows (room, name, amount, date, method)</div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Yearly Summary</div>
+          <table class="table">
+            <thead><tr><th>Month</th><th>Room Rate</th><th>Electricity</th><th>Water</th><th>Late Fee</th><th>Total</th></tr></thead>
+            <tbody>
+              ${yearSummary.map(y=> `<tr><td>${y.month}</td><td>${fmtTHB(y.room)}</td><td>${fmtTHB(y.elec)}</td><td>${fmtTHB(y.water)}</td><td>${fmtTHB(y.late)}</td><td>${fmtTHB(y.total)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+    // Export/Copy
+    $('#btnExportCsv').addEventListener('click', ()=>{
+      const rows2 = [['Room No.','Name','Amount','Date','Payment Method','Status'], ...rows];
+      download(csvFromRows(rows2), `payments-${new Date().toISOString().slice(0,10)}.csv`);
+      toast('CSV exported');
+    });
+    $('#btnCopyCsv').addEventListener('click', ()=>{
+      const rows2 = [['Room No.','Name','Amount','Date','Payment Method','Status'], ...rows];
+      navigator.clipboard.writeText(csvFromRows(rows2));
+      toast('CSV copied to clipboard');
+    });
+  },
+
+  files(){
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Files (Payment Slips) ========== -->
+      <section class="row">
+        <div class="card">
+          <div class="row" style="justify-content: space-between; align-items:center;">
+            <div class="section-title">Payment Slips</div>
+            <div class="t-actions">
+              <input id="fileSearch" class="btn" style="border-radius:12px;" placeholder="Search by room or name" />
+              <label class="btn"><input id="fileInput" type="file" accept="image/*" hidden />Upload</label>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="thumbgrid" id="slipGrid"></div>
+          <div class="helper">// TODO: Backend Storage — replace in-memory data URLs with real storage (GitHub/Drive/Cloud)</div>
+        </div>
+      </section>
+    `;
+    renderSlipGrid(Store.slips);
+
+    $('#fileInput').addEventListener('change', (e)=>{
+      const file = e.target.files?.[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const firstR = Store.renters[0];
+        Store.slips.unshift({
+          id: 'slip'+(Math.random()*1e6|0),
+          renterId: firstR?.id, roomNo: firstR?.roomNo, month: monthStr(0),
+          amount: 0, date: dateStr(0), dataUrl: reader.result
+        });
+        renderSlipGrid(Store.slips);
+        toast('Slip uploaded (mock)');
+        // TODO: Backend Storage — upload file & save metadata
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $('#fileSearch').addEventListener('input', (e)=>{
+      const q = e.target.value.toLowerCase();
+      const filtered = Store.slips.filter(s=>{
+        const r = Store.renters.find(x=>x.id===s.renterId);
+        return (s.roomNo+' '+(r?.name||'')).toLowerCase().includes(q);
+      });
+      renderSlipGrid(filtered);
+    });
+  },
+
+  settings(){
+    $('#routeContainer').innerHTML = `
+      <!-- ========== VIEW: Settings ========== -->
+      <section class="row">
+        <div class="card">
+          <div class="section-title">Billing Rules</div>
+          <div class="form-grid cols-2">
+            <div class="fbox"><label>Default Room Rate</label><input id="setRoomRate" type="number" value="${Store.billing.defaultRoomRate}" /></div>
+            <div class="fbox"><label>Electricity Rate (THB/kWh)</label><input id="setElec" type="number" value="${Store.billing.elecRate}" /></div>
+            <div class="fbox"><label>Water Rate (THB/m³)</label><input id="setWater" type="number" value="${Store.billing.waterRate}" /></div>
+            <div class="fbox"><label>Late Fee Policy</label>
+              <select id="setLateType">
+                <option ${Store.billing.lateFeePolicy.type==='percent'?'selected':''}>percent</option>
+                <option ${Store.billing.lateFeePolicy.type==='flat'?'selected':''}>flat</option>
+              </select>
+              <div class="helper">Percent per month or flat THB</div>
+            </div>
+            <div class="fbox"><label>Late Fee Value</label><input id="setLateVal" type="number" value="${Store.billing.lateFeePolicy.value}" /></div>
+            <div class="fbox" style="grid-column:1/-1;"><label>Deposit Policy</label><input id="setDepositPolicy" value="${Store.billing.depositPolicy}" /></div>
+          </div>
+          <div class="t-actions">
+            <button class="btn primary" id="btnSaveBilling">Save</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Integrations (Placeholders)</div>
+          <div class="row cols-3">
+            <div class="fbox">
+              <label>Google Sheets</label>
+              <div class="row"><span class="muted">Use as database for renters & payments</span></div>
+              <div class="helper">Status: not connected</div>
+              <button class="btn">Connect (mock)</button>
+              <div class="helper">// TODO: Google Sheets</div>
+            </div>
+            <div class="fbox">
+              <label>GitHub Pages</label>
+              <div class="helper">Host this UI — you can deploy index.html to GitHub Pages</div>
+              <a class="btn ghost" href="#" onclick="toast('Open README at top of file'); return false;">How-to</a>
+            </div>
+            <div class="fbox">
+              <label>Storage Provider</label>
+              <div class="helper">For payment slip images (Drive/S3/etc.)</div>
+              <button class="btn">Configure (mock)</button>
+              <div class="helper">// TODO: Backend Storage</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+    $('#btnSaveBilling').addEventListener('click', ()=>{
+      Store.billing.defaultRoomRate = Number($('#setRoomRate').value||0);
+      Store.billing.elecRate = Number($('#setElec').value||0);
+      Store.billing.waterRate = Number($('#setWater').value||0);
+      Store.billing.lateFeePolicy.type = $('#setLateType').value;
+      Store.billing.lateFeePolicy.value = Number($('#setLateVal').value||0);
+      Store.billing.depositPolicy = $('#setDepositPolicy').value;
+      toast('Billing settings saved (mock)');
+      // Recalc invoice form if open
+      if (window.location.hash.includes('invoices')) Routes.invoices();
+    });
+  }
+};
+
+/* ============================================================================================
+   VIEW HELPERS (Payments, Renters Detail, Slips, Print)
+   ============================================================================================ */
+function renderPaymentTab(type){
+  const root = $('#tabContent');
+  if(type==='record'){
+    const renterOptions = Store.renters.map(r=>`<option value="${r.id}">${r.name} — Room ${r.roomNo}</option>`).join('');
+    root.innerHTML = `
+      <!-- ========== COMPONENT: Record Payment ========== -->
+      <form id="formPayment" class="form-grid cols-2">
+        <div class="fbox">
+          <label>Renter</label>
+          <select id="payRenter">${renterOptions}</select>
+        </div>
+        <div class="fbox">
+          <label>Month</label>
+          <input id="payMonth" value="${monthStr(0)}" />
+        </div>
+        <div class="fbox">
+          <label>Type</label>
+          <select id="payType"><option>Full</option><option>Installment</option></select>
+        </div>
+        <div class="fbox">
+          <label>Amount (THB)</label>
+          <input id="payAmount" type="number" inputmode="decimal" placeholder="e.g., 3000" />
+        </div>
+        <div class="fbox">
+          <label>Payment Method</label>
+          <select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>PromptPay</option><option>Credit Card</option></select>
+        </div>
+        <div class="fbox">
+          <label>Date</label>
+          <input id="payDate" type="date" value="${dateStr(0)}" />
+        </div>
+        <div class="t-actions" style="grid-column: 1 / -1;">
+          <button type="reset" class="btn ghost">Clear</button>
+          <button type="submit" class="btn primary">Record Payment</button>
+        </div>
+      </form>
+      <div class="divider"></div>
+      <div class="section-title">Recent Payments</div>
+      <table class="table">
+        <thead><tr><th>Room</th><th>Renter</th><th>Month</th><th>Amount</th><th>Method</th><th>Date</th><th>Type</th></tr></thead>
+        <tbody>
+          ${Store.payments.slice(-10).reverse().map(p=>{
+            const r = Store.renters.find(x=>x.id===p.renterId);
+            return `<tr><td>${p.roomNo}</td><td>${r?.name||'-'}</td><td>${p.month}</td><td>${fmtTHB(p.amount)}</td><td>${p.method}</td><td>${p.date}</td><td>${p.type}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      <div class="helper">// TODO: Google Sheets — append payment row</div>
+    `;
+    $('#formPayment').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const rId = $('#payRenter').value;
+      const r = Store.renters.find(x=>x.id===rId);
+      const p = {
+        id: 'pay'+(Math.random()*1e6|0),
+        renterId: rId, roomNo: r?.roomNo,
+        month: $('#payMonth').value,
+        amount: Number($('#payAmount').value||0),
+        date: $('#payDate').value||dateStr(0),
+        method: $('#payMethod').value,
+        type: $('#payType').value
+      };
+      Store.payments.unshift(p);
+      toast('Payment recorded (mock)');
+      Routes.payments();
+      // TODO: Google Sheets
+    });
+
+  } else if(type==='slips'){
+    root.innerHTML = `
+      <!-- ========== COMPONENT: Payment Slips ========== -->
+      <div class="row" style="grid-template-columns: 1fr auto; align-items:center;">
+        <input id="slipSearch" class="btn" style="border-radius:12px;" placeholder="Search slips..." />
+        <label class="btn"><input id="slipUpload" type="file" accept="image/*" hidden />Upload Slip</label>
+      </div>
+      <div class="divider"></div>
+      <div class="thumbgrid" id="slipsGrid"></div>
+      <div class="helper">// TODO: Backend Storage — upload & persist files</div>
+    `;
+    renderSlipGrid(Store.slips, '#slipsGrid');
+
+    $('#slipUpload').addEventListener('change', (e)=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ()=>{
+        const first = Store.renters[0];
+        Store.slips.unshift({
+          id: 'slip'+(Math.random()*1e6|0), renterId: first?.id, roomNo: first?.roomNo,
+          month: monthStr(0), amount: 0, date: dateStr(0), dataUrl: r.result
+        });
+        renderSlipGrid(Store.slips, '#slipsGrid');
+        toast('Slip uploaded (mock)');
+      };
+      r.readAsDataURL(f);
+    });
+    $('#slipSearch').addEventListener('input', (e)=>{
+      const q = e.target.value.toLowerCase();
+      const filtered = Store.slips.filter(s=>{
+        const r = Store.renters.find(x=>x.id===s.renterId);
+        return (s.roomNo+' '+(r?.name||'')).toLowerCase().includes(q);
+      });
+      renderSlipGrid(filtered, '#slipsGrid');
+    });
+
+  } else { // batch
+    root.innerHTML = `
+      <!-- ========== COMPONENT: Batch Reconcile (Mock) ========== -->
+      <div class="row">
+        <div class="muted">Simulate matching slips to invoices by amount & month. (UI only)</div>
+        <div class="t-actions">
+          <button class="btn">Run Match (mock)</button>
+          <button class="btn ghost">Reset</button>
+        </div>
+        <div class="divider"></div>
+        <div class="helper">// TODO: Implement logic during backend phase</div>
+      </div>
+    `;
+  }
+}
+
+function renderSlipGrid(list, sel='#slipGrid'){
+  const host = $(sel);
+  host.innerHTML = list.map(s=>{
+    const r = Store.renters.find(x=>x.id===s.renterId);
+    return `<div class="thumb">
+      <img src="${s.dataUrl}" alt="Slip ${s.id}" />
+      <div class="row" style="grid-template-columns:1fr auto;">
+        <div><div class="muted">Room ${s.roomNo}</div><div>${r?.name||'-'}</div></div>
+        <div class="pill">${s.month}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddRenter(){
+  // populate room select with vacant
+  const sel = $('#rRoom'); sel.innerHTML = Store.rooms.filter(r=>r.status==='Vacant').map(r=> `<option>${r.roomNo}</option>`).join('');
+  openDrawer('drawerRenter');
+}
+$('#quickAddRenter').addEventListener('click', openAddRenter);
+$('#overlay').addEventListener('click', ()=>{
+  // close any open drawer or modal
+  $$('.drawer.show').forEach(d=> d.classList.remove('show'));
+  $$('.modal.show').forEach(m=> m.classList.remove('show'));
+  $('#overlay').classList.remove('show');
+});
+$$('[data-close]').forEach(x=> x.addEventListener('click', ()=> {
+  const id = x.getAttribute('data-close'); if(id.startsWith('drawer')) closeDrawer(id); else closeModal(id);
+}));
+
+$('#formAddRenter').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const id = 'r'+ (Math.random()*1e6|0);
+  const roomNo = $('#rRoom').value;
+  const renter = {
+    id, name: $('#rName').value, phone: $('#rPhone').value, address: $('#rAddress').value,
+    roomNo, moveIn: $('#rMoveIn').value||dateStr(0), deposit: Number($('#rDeposit').value||0),
+    method: $('#rMethod').value, notes: $('#rNotes').value, status: 'Active'
+  };
+  Store.renters.push(renter);
+  const room = Store.rooms.find(r=>r.roomNo===roomNo);
+  if (room){
+    room.status = 'Occupied'; room.currentRenterId = id;
+    room.history.push({ renterId: id, moveIn: renter.moveIn, moveOut: null });
+  }
+  closeDrawer('drawerRenter');
+  toast('Renter added (mock)');
+  if (window.location.hash.includes('renters')) Routes.renters();
+  // TODO: Google Sheets — push renter row
+});
+
+function openRenterDetail(renterId){
+  const r = Store.renters.find(x=>x.id===renterId);
+  if(!r) return;
+  $('#rdName').textContent = r.name;
+  $('#rdMeta').textContent = `Room ${r.roomNo} • ${r.status}`;
+  $('#rdMethod').textContent = r.method;
+  $('#rdContact').textContent = `${r.phone} • ${r.address}`;
+  // mock balance: unpaid invoices total - payments total
+  const invs = Store.invoices.filter(i=>i.renterId===r.id);
+  const pays = Store.payments.filter(p=>p.renterId===r.id);
+  const invSum = sum(invs,'total'), paySum = sum(pays,'amount');
+  $('#rdBalance').textContent = fmtTHB(invSum - paySum);
+  // timeline
+  const tl = $('#rdTimeline'); tl.innerHTML = '';
+  invs.slice(-4).forEach(i=>{
+    const node = document.createElement('div'); node.className='chip';
+    node.textContent = `Invoice ${i.month} — ${fmtTHB(i.total)} (${i.status})`; tl.appendChild(node);
+  });
+  pays.slice(-4).forEach(p=>{
+    const node = document.createElement('div'); node.className='chip';
+    node.textContent = `Payment ${p.date} — ${fmtTHB(p.amount)} (${p.method})`; tl.appendChild(node);
+  });
+
+  // Quick actions
+  $('#rdCreateInvoice').onclick = ()=> { closeDrawer('drawerRenterDetail'); setRoute('invoices'); };
+  $('#rdRecordPayment').onclick = ()=> { closeDrawer('drawerRenterDetail'); setRoute('payments'); };
+  $('#rdUploadSlip').onclick = ()=> { closeDrawer('drawerRenterDetail'); setRoute('files'); };
+
+  openDrawer('drawerRenterDetail');
+}
+
+/* ================== PRINT PREVIEW (Invoice/Receipt) ================== */
+function collectInvoiceForm(kind='Invoice'){
+  const renterId = $('#invRenter')?.value || (Store.renters[0]?.id);
+  const renter = Store.renters.find(r=>r.id===renterId);
+  const items = [];
+  const room = Number($('#liRoomRate')?.value || Store.billing.defaultRoomRate);
+  if(room) items.push(['Room Rate', 1, 'mo', room]);
+
+  const kwh = Number($('#liKwh')?.value || 0);
+  if(kwh) items.push(['Electricity', kwh, 'kWh', Store.billing.elecRate]);
+
+  const m3 = Number($('#liM3')?.value || 0);
+  if(m3) items.push(['Water', m3, 'm³', Store.billing.waterRate]);
+
+  const late = Number($('#liLate')?.value || 0);
+  if(late) items.push(['Late Fee', 1, 'flat', late]);
+
+  const other = Number($('#liOther')?.value || 0);
+  if(other) items.push(['Other', 1, 'flat', other]);
+
+  const dep = Number($('#liDepositReturn')?.value || 0);
+
+  const total = Math.max(0, room + kwh*Store.billing.elecRate + m3*Store.billing.waterRate + late + other - dep);
+
+  return {
+    kind,
+    renterName: renter?.name || '-',
+    roomNo: renter?.roomNo || '-',
+    month: $('#invMonth')?.value || monthStr(0),
+    items,
+    depositReturn: dep,
+    total
+  };
+}
+function injectPrint(inv){
+  const doc = $('#printFrame').contentWindow.document;
+  const rows = inv.items.map(it=> `<tr><td>${it[0]}</td><td style="text-align:right;">${it[1]} ${it[2]}</td><td style="text-align:right;">${fmtTHB(it[3])}</td><td style="text-align:right;">${fmtTHB(it[1]*it[3])}</td></tr>`).join('');
+  const depRow = inv.depositReturn ? `<tr><td>Deposit Return</td><td></td><td></td><td style="text-align:right;">− ${fmtTHB(inv.depositReturn)}</td></tr>` : '';
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${inv.kind} Preview</title>
+    <style>
+      body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; padding: 24px; color: #111; }
+      .sheet { max-width: 760px; margin: 0 auto; border: 1px solid #ddd; padding: 22px; }
+      .hdr { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+      .brand { font-weight: 800; font-size: 20px; }
+      .muted { color: #666; }
+      table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+      th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; }
+      th { text-align: left; background: #f8fafc; }
+      .total { text-align: right; font-weight: 800; font-size: 18px; }
+      @media print { .noprint { display:none; } }
+    </style></head><body>
+    <div class="sheet">
+      <div class="hdr">
+        <div>
+          <div class="brand">Apartment Management</div>
+          <div class="muted">${inv.kind}</div>
+        </div>
+        <div style="text-align:right;">
+          <div><strong>Date:</strong> ${dateStr(0)}</div>
+          <div><strong>Period:</strong> ${inv.month}</div>
+          <div><strong>Room:</strong> ${inv.roomNo}</div>
+          <div><strong>Renter:</strong> ${inv.renterName}</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Description</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Price</th><th style="text-align:right;">Amount</th></tr></thead>
+        <tbody>
+          ${rows}
+          ${depRow}
+        </tbody>
+      </table>
+      <div class="total" style="margin-top:10px;">Total: ${fmtTHB(inv.total)}</div>
+      <div class="muted" style="margin-top:18px;">Payment due within 7 days unless otherwise stated.</div>
+      <div class="noprint" style="margin-top:14px;"><em>Use the browser Print dialog and choose “Save as PDF”.</em></div>
+    </div>
+  </body></html>`);
+  doc.close();
+  $('#printTitle').textContent = inv.kind + ' — ' + inv.month;
+}
+$('#btnPrint').addEventListener('click', ()=>{
+  const fr = $('#printFrame').contentWindow;
+  fr.focus(); fr.print();
+});
+
+/* ================== FILTER RENTERS ================== */
+function filterRenters(nameQ, roomQ){
+  const tbody = $('#renterTable tbody'); if(!tbody) return;
+  $$('tr', tbody).forEach(tr=>{
+    const name = tr.children[0].textContent.toLowerCase();
+    const room = tr.children[1].textContent;
+    const show = (!nameQ || name.includes(nameQ)) && (!roomQ || room.includes(roomQ));
+    tr.style.display = show ? '' : 'none';
+  });
+}
+
+/* ================== PREVIEW EXISTING INVOICE ================== */
+function previewInvoice(invId, kind='invoice'){
+  const inv = Store.invoices.find(x=>x.id===invId);
+  if(!inv) return;
+  const renter = Store.renters.find(r=>r.id===inv.renterId);
+  const obj = {
+    kind: kind==='invoice' ? 'Invoice' : 'Receipt',
+    renterName: renter?.name || '-',
+    roomNo: inv.roomNo,
+    month: inv.month,
+    items: inv.items.map(i => [i.label, i.qty, i.unit, i.price]),
+    depositReturn: 0,
+    total: inv.total
+  };
+  injectPrint(obj); openModal('modalPrint');
+}
+
+/* ================== YEAR SUMMARY (MOCK) ================== */
+function summarizeYear(){
+  // Produce 12 rows of rough numbers from invoices
+  const months = Array.from({length:12}, (_,i)=>{
+    const d = new Date(); d.setMonth(d.getMonth()-i);
+    return d.toLocaleString('en-US',{month:'short', year:'2-digit'});
+  }).reverse();
+  return months.map((m,i)=>{
+    const room = 4000 + (i%5)*250;
+    const elec = 120*Store.billing.elecRate;
+    const water = 10*Store.billing.waterRate;
+    const late = i%3===0 ? room*0.02 : 0;
+    const total = room+elec+water+late;
+    return { month: m, room: Math.round(room), elec: Math.round(elec), water: Math.round(water), late: Math.round(late), total: Math.round(total) };
+  });
+}
+
+/* ============================================================================================
+   INIT & NAV
+   ============================================================================================ */
+function renderRoute(route){
+  if(!Routes[route]) route='dashboard';
+  Routes[route]();
+}
+function initialRoute(){
+  const hash = window.location.hash.replace('#/','');
+  renderRoute(hash || 'dashboard');
+  highlightNav(hash || 'dashboard');
+}
+
+$$('.navitem').forEach(n => n.addEventListener('click', ()=> setRoute(n.dataset.route)));
+$$('.mobile-tabbar [role=tab]').forEach(t => t.addEventListener('click', ()=> setRoute(t.dataset.route)));
+$('#fabAction').addEventListener('click', ()=>{
+  // context-aware: on Renters => Add Renter; on Payments => Record Payment; else show quick menu
+  const route = window.location.hash.replace('#/','') || 'dashboard';
+  if(route==='renters') openAddRenter();
+  else if(route==='payments') { setRoute('payments'); scrollToForm('payment'); }
+  else { setRoute('invoices'); scrollToForm('invoice'); }
+});
+function scrollToForm(kind){
+  setTimeout(()=>{
+    if(kind==='invoice') $('#invoiceFormCard')?.scrollIntoView({behavior:'smooth', block:'start'});
+    if(kind==='payment') $('#formPayment')?.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 50);
+}
+
+/* ===== THEME TOGGLE ===== */
+$('#toggleTheme').addEventListener('click', ()=>{
+  const isLight = document.body.classList.toggle('light');
+  if(!isLight) document.body.classList.add('dark'); // class isn't used but keeps semantics
+  $('#themeLabel').textContent = document.body.classList.contains('light') ? 'Light' : 'Dark';
+  $('#toggleTheme').setAttribute('aria-pressed', (!isLight).toString());
+});
+
+/* ===== Start ===== */
+window.addEventListener('load', initialRoute);
+window.addEventListener('hashchange', initialRoute);
+
+</script>
+</body>
+</html>

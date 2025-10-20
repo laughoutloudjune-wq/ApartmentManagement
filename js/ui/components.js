@@ -1,266 +1,80 @@
 import { API } from "../core/api.js";
 import { ROOMS } from "../data/rooms.js";
 import { Modal } from "./modal.js";
-
-/* ---------- Dashboard ---------- */
 export function renderDashboard(container){
-  container.innerHTML = `
-    <div class="section-head">
-      <h2>Dashboard</h2>
-      <p class="muted">Quick snapshot of the month.</p>
-    </div>
-    <div class="tiles">
-      <div class="tile glass"><h3>Collected (Month)</h3><div class="val" id="tCollected">—</div></div>
-      <div class="tile glass"><h3>Outstanding</h3><div class="val" id="tOutstanding">—</div></div>
-      <div class="tile glass"><h3>Late Accounts</h3><div class="val" id="tLate">—</div></div>
-      <div class="tile glass"><h3>Occupancy</h3><div class="val" id="tOccupancy">—</div></div>
-    </div>
-  `;
-  (async () => {
-    try {
-      const today = new Date();
-      const data = await API.reportMonthly(today.getMonth()+1, today.getFullYear());
-      document.getElementById("tCollected").textContent = data.total?.toFixed(2) ?? "0.00";
-      document.getElementById("tOutstanding").textContent = "—";
-      document.getElementById("tLate").textContent = "—";
-      document.getElementById("tOccupancy").textContent = "—";
-    } catch(e){
-      document.getElementById("tCollected").textContent = "Err";
-    }
-  })();
+  container.innerHTML=`<div class="section-head"><h2>Dashboard</h2><p class="muted">Quick snapshot of the month.</p></div>
+  <div class="tiles">
+    <div class="tile glass"><h3>Collected (Month)</h3><div class="val" id="tCollected">—</div></div>
+    <div class="tile glass"><h3>Outstanding</h3><div class="val" id="tOutstanding">—</div></div>
+    <div class="tile glass"><h3>Late Accounts</h3><div class="val" id="tLate">—</div></div>
+    <div class="tile glass"><h3>Occupancy</h3><div class="val" id="tOccupancy">—</div></div>
+  </div>`;
+  (async()=>{ try{ const d=new Date(); const r=await API.reportMonthly(d.getMonth()+1,d.getFullYear()); document.getElementById("tCollected").textContent=(r.total||0).toFixed(2);}catch{document.getElementById("tCollected").textContent="Err";}})();
 }
-
-/* ---------- Renters: floor-plan vertical ---------- */
 export function renderRenters(container){
-  container.innerHTML = `
-    <div class="section-head">
-      <h2>Renters</h2>
-      <p class="muted">Floor-plan vertical layout. Click a room to view or edit.</p>
-      <div><button class="btn" id="btnAddRenter">Add New Renter</button></div>
-    </div>
-    <div class="room-list" id="rooms"></div>
-    <div id="rentersMsg" style="margin-top:8px;"></div>
-  `;
-  const listEl = container.querySelector("#rooms");
-  populateRooms(listEl, {mode:"renters"});
-  container.querySelector("#btnAddRenter").addEventListener("click", openAddRenterModal);
+  container.innerHTML=`<div class="section-head"><h2>Renters</h2><p class="muted">Floor-plan vertical layout. Click a room to view or edit.</p><div><button class="btn" id="btnAddRenter">Add New Renter</button></div></div><div class="room-list" id="rooms"></div><div id="rentersMsg" style="margin-top:8px;"></div>`;
+  const listEl=container.querySelector("#rooms"); populateRooms(listEl,{mode:"renters"}); container.querySelector("#btnAddRenter").addEventListener("click", openAddRenterModal);
 }
-
-/* ---------- Payments: floor-plan vertical ---------- */
 export function renderPayments(container){
-  container.innerHTML = `
-    <div class="section-head">
-      <h2>Payments</h2>
-      <p class="muted">Record payments and print preview per room.</p>
-    </div>
-    <div class="room-list" id="rooms"></div>
-    <div id="payMsg" style="margin-top:8px;"></div>
-  `;
-  const listEl = container.querySelector("#rooms");
-  populateRooms(listEl, {mode:"payments"});
+  container.innerHTML=`<div class="section-head"><h2>Payments</h2><p class="muted">Record payments and print preview per room.</p></div><div class="room-list" id="rooms"></div><div id="payMsg" style="margin-top:8px;"></div>`;
+  const listEl=container.querySelector("#rooms"); populateRooms(listEl,{mode:"payments"});
 }
-
-/* ---------- Utilities (kept minimal) ---------- */
 export function renderUtilities(container){
-  container.innerHTML = `
-    <div class="section-head">
-      <h2>Utilities</h2>
-      <p class="muted">4-column monthly input. Save to sheet.</p>
-    </div>
-    <table class="table" id="utilTable">
-      <thead><tr>
-        <th>Room</th><th>Previous</th><th>Current</th><th>Usage</th>
-      </tr></thead>
-      <tbody>
-        <tr><td><input value="101/1"/></td><td><input value="1000" type="number"/></td><td><input value="1025" type="number"/></td><td class="usage">25</td></tr>
-      </tbody>
-    </table>
-    <button class="btn" id="btnSaveUtils">Save Utilities</button>
-    <div id="utilStatus" style="margin-top:8px;"></div>
-  `;
-  const tbody = container.querySelector("#utilTable tbody");
-  tbody.addEventListener("input", (e) => {
-    if (e.target.tagName === "INPUT") {
-      const tr = e.target.closest("tr");
-      const prev = Number(tr.children[1].querySelector("input").value||0);
-      const curr = Number(tr.children[2].querySelector("input").value||0);
-      tr.querySelector(".usage").textContent = String(curr - prev);
-    }
-  });
-  container.querySelector("#btnSaveUtils").addEventListener("click", async () => {
-    const btn = container.querySelector("#btnSaveUtils");
-    btn.setAttribute("aria-busy", "true");
-    const rows = [...tbody.querySelectorAll("tr")].map(tr => ({
-      room: tr.children[0].querySelector("input").value.trim(),
-      previous: Number(tr.children[1].querySelector("input").value||0),
-      current: Number(tr.children[2].querySelector("input").value||0),
-      usage: Number(tr.querySelector(".usage").textContent||0),
-    }));
-    try {
-      const data = await API.utilitiesSave(rows);
-      document.getElementById("utilStatus").textContent = "Saved " + data.saved + " rows.";
-    } catch (e) {
-      document.getElementById("utilStatus").textContent = "Error: " + e.message;
-    } finally {
-      btn.removeAttribute("aria-busy");
-    }
+  container.innerHTML=`<div class="section-head"><h2>Utilities</h2><p class="muted">4-column monthly input. Save to sheet.</p></div>
+  <table class="table" id="utilTable"><thead><tr><th>Room</th><th>Previous</th><th>Current</th><th>Usage</th></tr></thead><tbody>
+  <tr><td><input value="101/1"/></td><td><input value="1000" type="number"/></td><td><input value="1025" type="number"/></td><td class="usage">25</td></tr>
+  </tbody></table><button class="btn" id="btnSaveUtils">Save Utilities</button><div id="utilStatus" style="margin-top:8px;"></div>`;
+  const tbody=container.querySelector("#utilTable tbody");
+  tbody.addEventListener("input",e=>{ if(e.target.tagName==="INPUT"){ const tr=e.target.closest("tr"); const prev=Number(tr.children[1].querySelector("input").value||0); const curr=Number(tr.children[2].querySelector("input").value||0); tr.querySelector(".usage").textContent=String(curr-prev);} });
+  container.querySelector("#btnSaveUtils").addEventListener("click", async ()=>{
+    const btn=container.querySelector("#btnSaveUtils"); btn.setAttribute("aria-busy","true");
+    const rows=[...tbody.querySelectorAll("tr")].map(tr=>({ room:tr.children[0].querySelector("input").value.trim(), previous:Number(tr.children[1].querySelector("input").value||0), current:Number(tr.children[2].querySelector("input").value||0), usage:Number(tr.querySelector(".usage").textContent||0) }));
+    try{ const data=await API.utilitiesSave(rows); document.getElementById("utilStatus").textContent="Saved "+data.saved+" rows."; }catch(e){ document.getElementById("utilStatus").textContent="Error: "+e.message; } finally{ btn.removeAttribute("aria-busy"); }
   });
 }
-
-/* ---------- Reports (unchanged skeleton) ---------- */
 export function renderReports(container){
-  container.innerHTML = `
-    <div class="section-head">
-      <h2>Reports</h2>
-      <p class="muted">Monthly summary (scaffold).</p>
-    </div>
-    <div class="row" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <input id="repMonth" placeholder="MM" value="10" style="width:80px"/>
-      <input id="repYear" placeholder="YYYY" value="2025" style="width:100px"/>
-      <button class="btn" id="btnRunReport">Run</button>
-    </div>
-    <div id="reportOut" style="margin-top:8px;"></div>
-  `;
-  container.querySelector("#btnRunReport").addEventListener("click", async () => {
-    const m = Number(container.querySelector("#repMonth").value);
-    const y = Number(container.querySelector("#repYear").value);
-    const out = container.querySelector("#reportOut");
-    out.textContent = "Running…";
-    try {
-      const data = await API.reportMonthly(m, y);
-      out.textContent = JSON.stringify(data, null, 2);
-    } catch (e) {
-      out.textContent = "Error: " + e.message;
-    }
-  });
+  container.innerHTML=`<div class="section-head"><h2>Reports</h2><p class="muted">Monthly summary (scaffold).</p></div>
+  <div class="row" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><input id="repMonth" placeholder="MM" value="10" style="width:80px"/><input id="repYear" placeholder="YYYY" value="2025" style="width:100px"/><button class="btn" id="btnRunReport">Run</button></div><div id="reportOut" style="margin-top:8px;"></div>`;
+  container.querySelector("#btnRunReport").addEventListener("click", async ()=>{ const m=Number(container.querySelector("#repMonth").value); const y=Number(container.querySelector("#repYear").value); const out=container.querySelector("#reportOut"); out.textContent="Running…"; try{ const data=await API.reportMonthly(m,y); out.textContent=JSON.stringify(data,null,2);}catch(e){ out.textContent="Error: "+e.message; } });
 }
-
-/* ---------- Helpers ---------- */
-async function populateRooms(listEl, {mode}){
-  listEl.innerHTML = "";
-  let renters = [];
-  try { renters = await API.rentersList(); } catch {}
-  const byRoom = Object.fromEntries((renters||[]).map(r=>[String(r.room||""), r]));
-  ROOMS.forEach(room => {
-    const r = byRoom[room];
-    const name = r?.name || "Vacant";
-    const method = r?.payment_method || "—";
-    const phone = r?.phone || "";
-    const card = document.createElement("div");
-    card.className = "room-card glass";
-    card.innerHTML = `
+async function populateRooms(listEl,{mode}){
+  listEl.innerHTML=""; let renters=[]; try{ renters=await API.rentersList(); }catch{}
+  const byRoom=Object.fromEntries((renters||[]).map(r=>[String(r.room||""), r]));
+  ROOMS.forEach(room=>{
+    const r=byRoom[room]; const name=r?.name||"Vacant"; const method=r?.payment_method||"—"; const phone=r?.phone||"";
+    const card=document.createElement("div"); card.className="room-card glass"; card.innerHTML=`
       <div class="room-id">${room}</div>
-      <div class="room-meta">
-        <div><strong>${escapeHtml(name)}</strong></div>
-        <div>${phone ? "☎ "+escapeHtml(phone)+" • " : ""}Method: ${escapeHtml(method)}</div>
-      </div>
+      <div class="room-meta"><div><strong>${escapeHtml(name)}</strong></div><div>${phone? "☎ "+escapeHtml(phone)+" • " : ""}Method: ${escapeHtml(method)}</div></div>
       <div class="room-actions">
-        ${mode==="renters"
-          ? `<button class="btn" data-act="edit">Edit</button>`
-          : `<button class="btn" data-act="pay">Record</button>
-             <button class="btn" data-act="preview">Preview</button>`}
-      </div>
-    `;
-    const editBtn = card.querySelector('[data-act="edit"]');
-    if (editBtn) editBtn.addEventListener("click", ()=> openEditRenterModal(r, room));
-    const payBtn = card.querySelector('[data-act="pay"]');
-    if (payBtn) payBtn.addEventListener("click", ()=> openRecordPaymentModal(r, room));
-    const prevBtn = card.querySelector('[data-act="preview"]');
-    if (prevBtn) prevBtn.addEventListener("click", ()=> openPreviewModal(r, room));
+        ${mode==="renters" ? `<button class="btn" data-act="edit">Edit</button>` : `<button class="btn" data-act="pay">Record</button><button class="btn" data-act="preview">Preview</button>`}
+      </div>`;
+    const ebtn=card.querySelector('[data-act="edit"]'); if(ebtn) ebtn.addEventListener("click",()=> openEditRenterModal(r,room));
+    const pbtn=card.querySelector('[data-act="pay"]'); if(pbtn) pbtn.addEventListener("click",()=> openRecordPaymentModal(r,room));
+    const vbtn=card.querySelector('[data-act="preview"]'); if(vbtn) vbtn.addEventListener("click",()=> openPreviewModal(r,room));
     listEl.appendChild(card);
   });
 }
-
-function openAddRenterModal(){
-  Modal.open(`
-    <h3 style="margin:0 0 10px;">Add New Renter</h3>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-      <label>Name<input id="r_name"/></label>
-      <label>Room<input id="r_room" placeholder="e.g. 101/1"/></label>
-      <label>Phone<input id="r_phone"/></label>
-      <label>Payment Method<input id="r_method" placeholder="cash/transfer"/></label>
-      <label>Deposit (THB)<input id="r_deposit" type="number"/></label>
-    </div>
-  `, {
-    primaryText: "Add Renter",
-    onPrimary: async (close) => {
-      const payload = {
-        name: gv("r_name"),
-        room: gv("r_room"),
-        phone: gv("r_phone"),
-        payment_method: gv("r_method"),
-        deposit: Number(gv("r_deposit")||0),
-      };
-      if (!payload.name || !payload.room) { alert("Name and Room required"); return; }
-      await API.renterAdd(payload);
-      close(); location.reload();
-    }
-  });
-}
-
-function openEditRenterModal(rec, room){
-  Modal.open(`
-    <h3 style="margin:0 0 10px;">Edit Renter — ${escapeHtml(room)}</h3>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-      <label>Name<input id="e_name" value="${escapeHtml(rec?.name||"")}"/></label>
-      <label>Phone<input id="e_phone" value="${escapeHtml(rec?.phone||"")}"/></label>
-      <label>Payment Method<input id="e_method" value="${escapeHtml(rec?.payment_method||"")}"/></label>
-    </div>
-  `, {
-    primaryText: "Save",
-    onPrimary: async (close) => {
-      if (!rec?.id) { alert("No renter on this room. Use Add Renter instead."); return; }
-      await API.renterUpdate({
-        id: rec.id,
-        name: gv("e_name"),
-        phone: gv("e_phone"),
-        payment_method: gv("e_method"),
-      });
-      close(); location.reload();
-    }
-  });
-}
-
-function openRecordPaymentModal(rec, room){
-  Modal.open(`
-    <h3 style="margin:0 0 10px;">Record Payment — ${escapeHtml(room)}</h3>
-    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-      <label>Amount<input id="p_amount" type="number" step="0.01"/></label>
-      <label>Method
-        <select id="p_method">
-          <option value="cash">cash</option>
-          <option value="transfer">transfer</option>
-          <option value="installment">installment</option>
-        </select>
-      </label>
-      <label>Date<input id="p_date" type="date"/></label>
-    </div>
-  `, {
-    primaryText: "Save Payment",
-    onPrimary: async (close) => {
-      await API.paymentsRecord({
-        renter_id: rec?.id || "",
-        room, amount: Number(gv("p_amount")||0),
-        method: gv("p_method"),
-        date: gv("p_date") || new Date().toISOString().slice(0,10),
-      });
-      close();
-    }
-  });
-}
-
-function openPreviewModal(rec, room){
-  Modal.open(`
-    <h3 style="margin:0 0 10px;">Print Preview — ${escapeHtml(room)}</h3>
-    <div class="print-area" style="background:#fff; color:#111; padding:12px; border-radius:12px;">
-      <div><strong>Renter:</strong> ${escapeHtml(rec?.name||"—")}</div>
-      <div><strong>Room:</strong> ${escapeHtml(room)}</div>
-      <div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div>
-      <hr/>
-      <em>Preview only. Configure PDF later.</em>
-    </div>
-  `, { primaryText: "Print", onPrimary: async (close)=>{ window.print(); } });
-}
-
-function gv(id){ return document.getElementById(id)?.value?.trim() || ""; }
-function escapeHtml(s){ return (s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+function openAddRenterModal(){ Modal.open(`<h3 style="margin:0 0 10px;">Add New Renter</h3>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <label>Name<input id="r_name"/></label><label>Room<input id="r_room" placeholder="e.g. 101/1"/></label>
+    <label>Phone<input id="r_phone"/></label><label>Payment Method<input id="r_method" placeholder="cash/transfer"/></label>
+    <label>Deposit (THB)<input id="r_deposit" type="number"/></label>
+  </div>`, { primaryText:"Add Renter", onPrimary: async (close)=>{ const payload={ name:gv("r_name"), room:gv("r_room"), phone:gv("r_phone"), payment_method:gv("r_method"), deposit:Number(gv("r_deposit")||0) }; if(!payload.name||!payload.room){ alert("Name and Room required"); return; } await API.renterAdd(payload); close(); location.reload(); } }); }
+function openEditRenterModal(rec, room){ Modal.open(`<h3 style="margin:0 0 10px;">Edit Renter — ${escapeHtml(room)}</h3>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <label>Name<input id="e_name" value="${escapeHtml(rec?.name||"")}"/></label>
+    <label>Phone<input id="e_phone" value="${escapeHtml(rec?.phone||"")}"/></label>
+    <label>Payment Method<input id="e_method" value="${escapeHtml(rec?.payment_method||"")}"/></label>
+  </div>`, { primaryText:"Save", onPrimary: async (close)=>{ if(!rec?.id){ alert("No renter on this room. Use Add Renter instead."); return; } await API.renterUpdate({ id:rec.id, name:gv("e_name"), phone:gv("e_phone"), payment_method:gv("e_method") }); close(); location.reload(); } }); }
+function openRecordPaymentModal(rec,room){ Modal.open(`<h3 style="margin:0 0 10px;">Record Payment — ${escapeHtml(room)}</h3>
+  <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+    <label>Amount<input id="p_amount" type="number" step="0.01"/></label>
+    <label>Method<select id="p_method"><option value="cash">cash</option><option value="transfer">transfer</option><option value="installment">installment</option></select></label>
+    <label>Date<input id="p_date" type="date"/></label>
+  </div>`, { primaryText:"Save Payment", onPrimary: async (close)=>{ await API.paymentsRecord({ renter_id:rec?.id||"", room, amount:Number(gv("p_amount")||0), method:gv("p_method"), date: gv("p_date")|| new Date().toISOString().slice(0,10) }); close(); } }); }
+function openPreviewModal(rec,room){ Modal.open(`<h3 style="margin:0 0 10px;">Print Preview — ${escapeHtml(room)}</h3>
+  <div class="print-area" style="background:#fff; color:#111; padding:12px; border-radius:12px;">
+    <div><strong>Renter:</strong> ${escapeHtml(rec?.name||"—")}</div><div><strong>Room:</strong> ${escapeHtml(room)}</div><div><strong>Date:</strong> ${new Date().toLocaleDateString()}</div><hr/><em>Preview only. Configure PDF later.</em>
+  </div>`, { primaryText:"Print", onPrimary: async (close)=>{ window.print(); } }); }
+function gv(id){ return document.getElementById(id)?.value?.trim()||""; }
+function escapeHtml(s){ return (s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;" }[m])); }

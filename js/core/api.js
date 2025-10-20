@@ -1,34 +1,26 @@
-// FRONTEND CORE API WRAPPER
-// Update API_BASE and API_KEY after you deploy Apps Script.
-const API_BASE = "https://script.google.com/macros/s/AKfycbzrwcRkYJqql1MQ9T74hP1yRm-xhF8DgzjeteHLMuXt9PHVipuk0ql4BmV5OQ0W3BU/exec";
-const API_KEY = "dev-local-secret"; // must match backend CONFIG.API_KEY
+const API_BASE = "PUT_YOUR_GAS_WEB_APP_URL_HERE"; // paste Web App URL after deploy
+const API_KEY = "dev-local-secret";
 
-async function apiCall(action, payload = {}) {
-  const body = { action, payload, apiKey: API_KEY };
-  const res = await fetch(API_BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`API HTTP ${res.status}: ${text}`);
-  }
-  const json = await res.json();
-  if (json.ok !== true) {
-    throw new Error(json.error || "Unknown API error");
-  }
-  return json.data;
+async function apiCall(action, payload={}){
+  const res = await fetch(API_BASE, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ action, payload, apiKey: API_KEY }) });
+  if(!res.ok) throw new Error("HTTP "+res.status+" "+await res.text());
+  const j = await res.json(); if(j.ok!==true) throw new Error(j.error||"API error"); return j.data;
 }
 
 export const API = {
-  ping: () => apiCall("ping"),
-  rentersList: () => apiCall("renters.list"),
-  renterAdd: (record) => apiCall("renters.add", record),
-  renterUpdate: (record) => apiCall("renters.update", record),
-  renterDelete: (id) => apiCall("renters.delete", { id }),
-  utilitiesSave: (rows) => apiCall("utilities.save", { rows }),
-  paymentsRecord: (record) => apiCall("payments.record", record),
-  reportMonthly: (month, year) => apiCall("report.monthly", { month, year }),
-  fileUploadBase64: (b64, filename, mime) => apiCall("file.upload", { b64, filename, mime }),
+  ping: ()=> apiCall("ping"),
+  rentersList: ()=> apiCall("renters.list"),
+  renterAdd: (record)=> apiCall("renters.add", record),
+  renterUpdate: (record)=> apiCall("renters.update", record),
+  renterDelete: (id)=> apiCall("renters.delete", { id }),
+  utilitiesSave: (rows)=> apiCall("utilities.save", { rows }),
+  utilitiesLatest: ()=> apiCall("utilities.latest"),
+  paymentsRecord: (record)=> apiCall("payments.record", record),
+  paymentsHistoryByRoom: (room,limit=50)=> apiCall("payments.historyByRoom", { room, limit }),
+  reportMonthly: (month,year)=> apiCall("report.monthly", { month, year }),
+  settingsList: ()=> apiCall("settings.list"),
+  settingsUpdate: (kv)=> apiCall("settings.update", kv),
+  lateComputeRoom: (room, period=null)=> apiCall("late.computeRoom", { room, period }),
+  moveoutGenerate: (renter_id, room, moveout_date)=> apiCall("moveout.generateSummary", { renter_id, room, moveout_date }),
+  moveoutFinalize: (summary)=> apiCall("moveout.finalize", { summary }),
 };

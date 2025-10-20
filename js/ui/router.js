@@ -1,7 +1,7 @@
-// Simple tab router with FAB behavior.
-import { renderRenters, renderPayments, renderUtilities, renderReports } from "./components.js";
+import { renderDashboard, renderRenters, renderPayments, renderUtilities, renderReports } from "./components.js";
 
 const tabs = [
+  { id: "dashboard", viewId: "view-dashboard", render: renderDashboard },
   { id: "renters", viewId: "view-renters", render: renderRenters },
   { id: "payments", viewId: "view-payments", render: renderPayments },
   { id: "utilities", viewId: "view-utilities", render: renderUtilities },
@@ -15,7 +15,7 @@ export function initRouter() {
     const tabId = e.target.getAttribute("data-tab");
     setActive(tabId);
   });
-  setActive("renters");
+  setActive("dashboard");
 }
 
 function setActive(tabId) {
@@ -25,5 +25,4 @@ function setActive(tabId) {
   const sec = document.getElementById(cfg.viewId);
   sec.classList.add("active");
   cfg.render(sec);
-  // FAB semantics could change per tab in the future
 }

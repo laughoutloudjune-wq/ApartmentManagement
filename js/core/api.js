@@ -1,6 +1,6 @@
 // FRONTEND CORE API WRAPPER
 // Update API_BASE and API_KEY after you deploy Apps Script.
-const API_BASE = "PUT_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+const API_BASE = "https://script.google.com/macros/s/AKfycbzrwcRkYJqql1MQ9T74hP1yRm-xhF8DgzjeteHLMuXt9PHVipuk0ql4BmV5OQ0W3BU/exec";
 const API_KEY = "dev-local-secret"; // must match backend CONFIG.API_KEY
 
 async function apiCall(action, payload = {}) {

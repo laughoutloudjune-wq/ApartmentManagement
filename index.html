@@ -1,23 +1,44 @@
-<!DOCTYPE html><html lang="en"><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Apartment Management App</title>
-<link rel="stylesheet" href="./css/styles.css"/>
-</head><body>
-<header class="topbar glass"><div class="brand"></div><button id="refreshBtn" class="btn" title="Refresh Data">⟳</button></header>
-<main id="app">
-<nav class="tabs">
-  <button data-tab="dashboard" class="tab active">Dashboard</button>
-  <button data-tab="renters" class="tab">Renters</button>
-  <button data-tab="payments" class="tab">Payments</button>
-  <button data-tab="utilities" class="tab">Utilities</button>
-  <button data-tab="reports" class="tab">Reports</button>
-</nav>
-<section id="view-dashboard" class="view active"></section>
-<section id="view-renters" class="view"></section>
-<section id="view-payments" class="view"></section>
-<section id="view-utilities" class="view"></section>
-<section id="view-reports" class="view"></section>
-</main>
-<div id="modalRoot" class="modal" aria-hidden="true"><div class="modal-card glass"><div class="modal-body" id="modalBody"></div><div class="modal-actions"><button class="btn" id="modalPrimary">OK</button><button class="btn" id="modalClose">Close</button></div></div></div>
-<script type="module" src="./js/app.js"></script>
-</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Apartment Management App</title>
+  <link rel="stylesheet" href="./css/styles.css"/>
+</head>
+<body>
+  <header class="topbar glass">
+    <div class="brand"></div>
+    <button id="refreshBtn" class="btn" title="Refresh Data">⟳</button>
+  </header>
+
+  <main id="app">
+    <nav class="tabs">
+      <button data-tab="dashboard" class="tab active">Dashboard</button>
+      <button data-tab="renters" class="tab">Renters</button>
+      <button data-tab="payments" class="tab">Payments</button>
+      <button data-tab="utilities" class="tab">Utilities</button>
+      <button data-tab="reports" class="tab">Reports</button>
+    </nav>
+
+    <section id="view-dashboard" class="view active"></section>
+    <section id="view-renters" class="view"></section>
+    <section id="view-payments" class="view"></section>
+    <section id="view-utilities" class="view"></section>
+    <section id="view-reports" class="view"></section>
+  </main>
+
+  <!-- Modal root (overlay window) -->
+  <div id="modalRoot" class="modal" aria-hidden="true">
+    <div class="modal-card glass">
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="btn" id="modalPrimary">OK</button>
+        <button class="btn" id="modalClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

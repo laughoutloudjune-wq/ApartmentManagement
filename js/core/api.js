@@ -1,4 +1,4 @@
-const API_BASE = "PUT_YOUR_GAS_WEB_APP_URL_HERE"; // paste Web App URL after deploy
+const API_BASE = "https://script.google.com/macros/s/AKfycbzrwcRkYJqql1MQ9T74hP1yRm-xhF8DgzjeteHLMuXt9PHVipuk0ql4BmV5OQ0W3BU/exec"; // paste Web App URL after deploy
 const API_KEY = "dev-local-secret";
 
 async function apiCall(action, payload={}){
